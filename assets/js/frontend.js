@@ -234,6 +234,9 @@ jQuery(document).ready(function($) {
                 // Add click interaction
                 addClickInteraction();
                 
+                // Setup click outside handler for thought bubble
+                setupClickOutsideHandler();
+                
                 // Add smooth entrance animation
                 mascot.hide().fadeIn(800);
                 
@@ -244,8 +247,8 @@ jQuery(document).ready(function($) {
                 if (gltf.animations && gltf.animations.length > 0) {
                     console.log('Found animations:', gltf.animations);
                     
-                    // Filter to only show Walk and Survey animations
-                    var allowedAnimations = ['Walk', 'Survey'];
+                    // Filter to only show Walk, Run and Survey animations
+                    var allowedAnimations = ['Walk', 'Run', 'Survey'];
                     var filteredAnimations = gltf.animations.filter(function(animation) {
                         return allowedAnimations.includes(animation.name);
                     });
@@ -269,22 +272,10 @@ jQuery(document).ready(function($) {
                     console.log('Frontend: Available animations:', Object.keys(modelAnimations));
                     console.log('Frontend: Total animations found:', gltf.animations.length, 'Filtered to:', filteredAnimations.length);
                     
-                    // Start with Walk animation if available
-                    if (modelAnimations['Walk']) {
-                        startAnimation('Walk');
-                        console.log('Frontend: Started with Walk animation');
-                    } else if (modelAnimations['Survey']) {
-                        startAnimation('Survey');
-                        console.log('Frontend: Started with Survey animation');
-                    } else {
-                        console.log('Frontend: No Walk or Survey animations found');
-                    }
-                    
-                    // Start both animations if available
+                    // Start the random animation switching system
                     if (modelAnimations['Walk'] && modelAnimations['Survey']) {
-                        startAnimation('Walk');
-                        startAnimation('Survey');
-                        console.log('Frontend: Started both Walk and Survey animations');
+                        startRandomAnimationSwitching();
+                        console.log('Frontend: Started random animation switching (Walk/Run + Survey)');
                     } else if (modelAnimations['Walk']) {
                         startAnimation('Walk');
                         console.log('Frontend: Started Walk animation only');
@@ -292,7 +283,7 @@ jQuery(document).ready(function($) {
                         startAnimation('Survey');
                         console.log('Frontend: Started Survey animation only');
                     } else {
-                        console.log('Frontend: No Walk or Survey animations found');
+                        console.log('Frontend: No Walk, Run or Survey animations found');
                     }
                     
                     // Display active animation list
@@ -318,18 +309,216 @@ jQuery(document).ready(function($) {
         mascot.addClass('fallback-text');
     }
     
-    // Add click interaction
+    /**
+     * Add click interaction with smooth rotation animation and thought bubble cloud
+     * - Rotates model 15 degrees randomly left or right
+     * - Returns to original position after 1 second delay
+     * - Shows thought bubble cloud with FAQ questions above model head
+     * - Cloud follows model position and shows random questions/answers
+     */
     function addClickInteraction() {
         mascot.on('click', function() {
-            if (model) {
-                // Rotate model on click
-                model.rotation.y += Math.PI / 2;
+            if (model && !model.isAnimating) {
+                // Store original rotation
+                var originalRotationY = model.rotation.y;
+                
+                // Randomly choose left or right rotation (15 degrees = 0.2618 radians)
+                var rotationDirection = Math.random() < 0.5 ? -1 : 1;
+                var targetRotation = originalRotationY + (rotationDirection * 0.2618);
+                
+                // Set animation flag
+                model.isAnimating = true;
                 
                 // Add click animation class
                 $(this).addClass('clicked');
+                
+                // Show thought bubble cloud with random FAQ question
+                showThoughtBubble();
+                
+                // Animate rotation to target position
+                var startTime = Date.now();
+                var animationDuration = 300; // 300ms to rotate
+                var returnDelay = 1000; // 1 second delay before returning
+                
+                function animateRotation() {
+                    var elapsed = Date.now() - startTime;
+                    var progress = Math.min(elapsed / animationDuration, 1);
+                    
+                    // Use easing function for smooth animation
+                    var easeProgress = 1 - Math.pow(1 - progress, 3); // Ease out cubic
+                    
+                    // Interpolate rotation
+                    model.rotation.y = originalRotationY + (easeProgress * (targetRotation - originalRotationY));
+                    
+                    if (progress < 1) {
+                        requestAnimationFrame(animateRotation);
+                    } else {
+                        // Wait for delay, then animate back to original position
+                        setTimeout(function() {
+                            var returnStartTime = Date.now();
+                            var returnDuration = 400; // 400ms to return
+                            
+                            function animateReturn() {
+                                var returnElapsed = Date.now() - returnStartTime;
+                                var returnProgress = Math.min(returnElapsed / returnDuration, 1);
+                                
+                                // Use easing function for smooth return
+                                var returnEaseProgress = 1 - Math.pow(1 - returnProgress, 3); // Ease out cubic
+                                
+                                // Interpolate rotation back to original
+                                model.rotation.y = targetRotation - (returnEaseProgress * (targetRotation - originalRotationY));
+                                
+                                if (returnProgress < 1) {
+                                    requestAnimationFrame(animateReturn);
+                                } else {
+                                    // Reset to exact original rotation and clear animation flag
+                                    model.rotation.y = originalRotationY;
+                                    model.isAnimating = false;
+                                }
+                            }
+                            
+                            animateReturn();
+                        }, returnDelay);
+                    }
+                }
+                
+                // Start the rotation animation
+                animateRotation();
+                
+                // Remove click class after animation
                 setTimeout(function() {
                     mascot.removeClass('clicked');
                 }, 300);
+            }
+        });
+    }
+    
+    /**
+     * Thought bubble cloud system
+     */
+    var currentThoughtBubble = null;
+    var isShowingAnswer = false;
+    var currentFAQ = null;
+    
+    /**
+     * Show thought bubble cloud with random FAQ question
+     */
+    function showThoughtBubble() {
+        // Remove existing cloud if any
+        removeThoughtBubble();
+        
+        // Get random FAQ question
+        var randomFAQ = getRandomFAQ();
+        currentFAQ = randomFAQ;
+        isShowingAnswer = false;
+        
+        // Create thought bubble cloud
+        var cloud = createThoughtBubble(randomFAQ.question);
+        currentThoughtBubble = cloud;
+        
+        // Position cloud above model head
+        positionCloudAboveModel(cloud);
+        
+        // Add click event to cloud to show answer
+        cloud.on('click', function(e) {
+            e.stopPropagation();
+            showFAQAnswer(randomFAQ);
+        });
+        
+        // Add cloud to page
+        $('body').append(cloud);
+        
+        console.log('💭 Thought bubble shown with question:', randomFAQ.question);
+    }
+    
+    /**
+     * Show FAQ answer in the thought bubble
+     */
+    function showFAQAnswer(faq) {
+        if (!currentThoughtBubble || isShowingAnswer) return;
+        
+        isShowingAnswer = true;
+        
+        // Update cloud content to show answer
+        currentThoughtBubble.find('.thought-bubble-content').text(faq.answer);
+        currentThoughtBubble.addClass('showing-answer');
+        
+        console.log('💡 Showing answer for:', faq.question);
+    }
+    
+    /**
+     * Remove thought bubble cloud
+     */
+    function removeThoughtBubble() {
+        if (currentThoughtBubble) {
+            currentThoughtBubble.remove();
+            currentThoughtBubble = null;
+            currentFAQ = null;
+            isShowingAnswer = false;
+        }
+    }
+    
+    /**
+     * Create thought bubble cloud element
+     */
+    function createThoughtBubble(content) {
+        // Random cloud shape class
+        var cloudShapes = ['cloud-shape-1', 'cloud-shape-2', 'cloud-shape-3', 'cloud-shape-4'];
+        var randomShape = cloudShapes[Math.floor(Math.random() * cloudShapes.length)];
+        
+        var cloud = $('<div class="thought-bubble ' + randomShape + '">' +
+            '<div class="thought-bubble-content">' + content + '</div>' +
+            '<div class="thought-bubble-tail"></div>' +
+            '</div>');
+        
+        return cloud;
+    }
+    
+    /**
+     * Position cloud above model head
+     */
+    function positionCloudAboveModel(cloud) {
+        var mascotRect = mascot[0].getBoundingClientRect();
+        var cloudHeight = 120; // Approximate cloud height
+        var offsetY = 20; // Distance above model
+        
+        // Position cloud above model head
+        cloud.css({
+            'position': 'fixed',
+            'top': (mascotRect.top - cloudHeight - offsetY) + 'px',
+            'left': (mascotRect.left + mascotRect.width / 2 - 100) + 'px', // Center above model
+            'z-index': 10000
+        });
+    }
+    
+    /**
+     * Get random FAQ from the list
+     */
+    function getRandomFAQ() {
+        var activeFAQs = dummyFAQList.filter(function(faq) {
+            return faq.is_active;
+        });
+        
+        if (activeFAQs.length === 0) {
+            return dummyFAQList[0]; // Fallback to first FAQ
+        }
+        
+        var randomIndex = Math.floor(Math.random() * activeFAQs.length);
+        return activeFAQs[randomIndex];
+    }
+    
+    /**
+     * Handle clicks outside model and cloud
+     */
+    function setupClickOutsideHandler() {
+        $(document).on('click', function(e) {
+            // Check if click is outside model and cloud
+            var target = $(e.target);
+            var isModelClick = target.closest('.assistant-mascot').length > 0;
+            var isCloudClick = target.closest('.thought-bubble').length > 0;
+            
+            if (!isModelClick && !isCloudClick) {
+                removeThoughtBubble();
             }
         });
     }
@@ -338,6 +527,17 @@ jQuery(document).ready(function($) {
     var modelAnimations = {};
     var animationMixer;
     var currentAnimations = []; // Track multiple active animations
+    
+    // Random animation switching system
+    var animationSwitcher;
+    var currentMovementAnimation = 'Walk'; // Current movement animation (Walk or Run)
+    var isSurveyActive = false; // Track if Survey animation is active
+    var switchInterval; // Interval for switching animations
+    
+    // Animation speed control
+    var normalAnimationSpeed = 1.0;
+    var runAnimationSpeed = 1.5; // 50% faster for run animation
+    var currentAnimationSpeed = normalAnimationSpeed;
     
     // Dummy FAQ list
     var dummyFAQList = [
@@ -360,7 +560,7 @@ jQuery(document).ready(function($) {
         {
             id: 3,
             question: "Which animations are available?",
-            answer: "Currently, the mascot supports Walk and Survey animations. These can be enabled/disabled and controlled through the admin settings.",
+            answer: "The mascot supports Walk, Run, and Survey animations. The system automatically alternates between Walk+Survey, Run+Survey, and Survey Only at random intervals (3-6 seconds). Run animation plays 50% faster for more dynamic movement.",
             category: "Animations",
             created_at: "2024-01-01",
             is_active: true
@@ -437,8 +637,8 @@ jQuery(document).ready(function($) {
     console.log('=== END DUMMY FAQ LIST ===');
 
     function startAnimation(animationName) {
-        // Only allow Walk and Survey animations
-        var allowedAnimations = ['Walk', 'Survey'];
+        // Only allow Walk, Run and Survey animations
+        var allowedAnimations = ['Walk', 'Run', 'Survey'];
         if (!allowedAnimations.includes(animationName)) {
             console.log('Animation not allowed on frontend:', animationName);
             return;
@@ -449,16 +649,28 @@ jQuery(document).ready(function($) {
             var action = modelAnimations[animationName].action;
             action.reset();
             action.setLoop(THREE.LoopRepeat);
+            
+            // Set animation speed based on type
+            if (animationName === 'Run') {
+                action.timeScale = runAnimationSpeed;
+                currentAnimationSpeed = runAnimationSpeed;
+                console.log('🏃 Run animation started with speed:', runAnimationSpeed);
+            } else {
+                action.timeScale = normalAnimationSpeed;
+                currentAnimationSpeed = normalAnimationSpeed;
+                console.log('🚶 Animation started with normal speed:', normalAnimationSpeed);
+            }
+            
             action.play();
             
             currentAnimations.push(animationName);
-            console.log('Started animation:', animationName);
+            console.log('Started animation:', animationName, 'at speed:', action.timeScale);
         }
     }
     
     function stopAnimation(animationName) {
-        // Only allow Walk and Survey animations
-        var allowedAnimations = ['Walk', 'Survey'];
+        // Only allow Walk, Run and Survey animations
+        var allowedAnimations = ['Walk', 'Run', 'Survey'];
         if (!allowedAnimations.includes(animationName)) {
             return;
         }
@@ -477,8 +689,8 @@ jQuery(document).ready(function($) {
     }
     
     function toggleAnimation(animationName) {
-        // Only allow Walk and Survey animations
-        var allowedAnimations = ['Walk', 'Survey'];
+        // Only allow Walk, Run and Survey animations
+        var allowedAnimations = ['Walk', 'Run', 'Survey'];
         if (!allowedAnimations.includes(animationName)) {
             return;
         }
@@ -521,16 +733,18 @@ jQuery(document).ready(function($) {
                 var animation = modelAnimations[animationName];
                 var isRunning = animation.action.isRunning();
                 var isLooping = animation.action.loop === THREE.LoopRepeat;
+                var speed = animation.action.timeScale || 1.0;
                 
                 animationTable.push({
                     'Animation Name': animationName,
                     'Duration': animation.animation.duration.toFixed(2) + 's',
+                    'Speed': speed.toFixed(2) + 'x',
                     'Status': isRunning ? 'Playing' : 'Stopped',
                     'Loop Mode': isLooping ? 'Looping' : 'Once',
                     'Current Time': animation.action.time.toFixed(2) + 's'
                 });
                 
-                console.log(`- ${animationName}: ${animation.animation.duration.toFixed(2)}s (${isRunning ? 'Playing' : 'Stopped'})`);
+                console.log(`- ${animationName}: ${animation.animation.duration.toFixed(2)}s (${isRunning ? 'Playing' : 'Stopped'}) at ${speed.toFixed(2)}x speed`);
             });
             
             console.table(animationTable);
@@ -541,11 +755,164 @@ jQuery(document).ready(function($) {
             } else {
                 console.log('No animation currently playing');
             }
+            
+            // Show speed information
+            getCurrentAnimationSpeed();
         } else {
             console.log('No animations loaded on model');
         }
         
         console.log('=== END ANIMATION LIST ===');
+    }
+    
+    /**
+     * Start the random animation switching system
+     * Alternates between Walk+Survey, Run+Survey, and Survey Only at random intervals
+     * 
+     * Animation Distribution:
+     * - 40% chance: Walk + Survey
+     * - 40% chance: Run + Survey  
+     * - 20% chance: Survey Only
+     * 
+     * Timing: Random intervals between 3-6 seconds
+     */
+    function startRandomAnimationSwitching() {
+        if (switchInterval) {
+            clearInterval(switchInterval);
+        }
+        
+        console.log('🎬 Starting random animation switching system...');
+        console.log('📊 Available animations:', Object.keys(modelAnimations));
+        
+        // Start with Walk + Survey
+        startMovementAnimation('Walk');
+        
+        // Set up random switching interval (between 3-6 seconds)
+        function scheduleNextSwitch() {
+            var delay = Math.random() * 3000 + 3000; // 3-6 seconds
+            
+            console.log('⏰ Next animation switch scheduled in', (delay/1000).toFixed(1), 'seconds');
+            
+            switchInterval = setTimeout(function() {
+                // Randomly choose between Walk+Survey, Run+Survey, and Survey Only
+                var animationChoice = Math.random();
+                var newAnimation;
+                
+                if (animationChoice < 0.4) {
+                    newAnimation = 'Walk';
+                } else if (animationChoice < 0.8) {
+                    newAnimation = 'Run';
+                } else {
+                    newAnimation = 'Survey Only';
+                }
+                
+                console.log('🔄 Switching to:', newAnimation, 'animation');
+                
+                // Apply the chosen animation
+                if (newAnimation === 'Survey Only') {
+                    startSurveyOnly();
+                } else {
+                    startMovementAnimation(newAnimation);
+                }
+                
+                // Schedule next switch
+                scheduleNextSwitch();
+            }, delay);
+        }
+        
+        // Start the switching cycle
+        scheduleNextSwitch();
+        
+        console.log('✅ Random animation switching started successfully');
+    }
+    
+    /**
+     * Start a specific movement animation (Walk or Run) with Survey
+     */
+    function startMovementAnimation(movementType) {
+        if (!modelAnimations[movementType] || !modelAnimations['Survey']) {
+            return;
+        }
+        
+        // Stop current movement animation if different
+        if (currentMovementAnimation !== movementType && currentMovementAnimation !== 'Survey Only') {
+            stopAnimation(currentMovementAnimation);
+        }
+        
+        // Stop current movement animation (including Survey Only)
+        if (currentMovementAnimation !== movementType) {
+            stopAnimation(currentMovementAnimation);
+        }
+        
+        // Start new movement animation with appropriate speed
+        startAnimation(movementType);
+        
+        // Always keep Survey animation running at normal speed
+        if (!isSurveyActive) {
+            startAnimation('Survey');
+            isSurveyActive = true;
+        }
+        
+        currentMovementAnimation = movementType;
+        
+        var speedText = movementType === 'Run' ? 'fast' : 'normal';
+        console.log('Switched to movement animation:', movementType, '+ Survey (speed:', speedText + ')');
+    }
+    
+    /**
+     * Start the Survey Only animation
+     */
+    function startSurveyOnly() {
+        if (modelAnimations['Survey']) {
+            // Stop any current movement animation
+            if (currentMovementAnimation !== 'Survey Only') {
+                stopAnimation(currentMovementAnimation);
+            }
+            
+            // Start Survey animation at normal speed
+            startAnimation('Survey');
+            isSurveyActive = true;
+            currentMovementAnimation = 'Survey Only';
+            currentAnimationSpeed = normalAnimationSpeed;
+            
+            console.log('Switched to Survey Only animation (normal speed)');
+        }
+    }
+    
+    /**
+     * Get current animation speed information
+     */
+    function getCurrentAnimationSpeed() {
+        var speedInfo = {
+            'Current Speed': currentAnimationSpeed,
+            'Normal Speed': normalAnimationSpeed,
+            'Run Speed': runAnimationSpeed,
+            'Current Animation': currentMovementAnimation,
+            'Survey Active': isSurveyActive
+        };
+        
+        console.log('📊 Current Animation Speed Info:', speedInfo);
+        return speedInfo;
+    }
+    
+    /**
+     * Stop the random animation switching system
+     */
+    function stopRandomAnimationSwitching() {
+        if (switchInterval) {
+            clearTimeout(switchInterval);
+            switchInterval = null;
+        }
+        
+        // Stop all animations
+        Object.keys(modelAnimations).forEach(function(animationName) {
+            stopAnimation(animationName);
+        });
+        
+        currentMovementAnimation = 'Walk';
+        isSurveyActive = false;
+        
+        console.log('Random animation switching stopped');
     }
     
 
@@ -640,6 +1007,11 @@ jQuery(document).ready(function($) {
     
     // Handle window resize
     $(window).on('resize', onWindowResize);
+    
+    // Cleanup animation switching on page unload
+    $(window).on('beforeunload', function() {
+        stopRandomAnimationSwitching();
+    });
     
     // Add keyboard accessibility
     mascot.attr('tabindex', '0').attr('role', 'button').attr('aria-label', '3D Plugin status indicator');

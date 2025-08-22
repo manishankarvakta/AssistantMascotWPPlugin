@@ -320,9 +320,9 @@
 
 /* Enhanced click animation for preview */
 .assistant-mascot-box.clicked {
-    transform: scale(0.95);
-    box-shadow: 0 2px 8px rgba(255, 0, 0, 0.5);
-    transition: all 0.2s ease;
+    /* transform: scale(0.95); */
+    /* box-shadow: 0 2px 8px rgba(255, 0, 0, 0.5); */
+    /* transition: all 0.2s ease; */
 }
 
 /* Feature item hover enhancement */

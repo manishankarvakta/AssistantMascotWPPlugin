@@ -50,9 +50,15 @@
 /* Click animation */
 .assistant-mascot.clicked {
     transform: scale(0.95);
-    transition: transform 0.1s ease;
+    transition: transform 0.1s ease, box-shadow 0.1s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
+/* Hover effect */
+.assistant-mascot:hover {
+    transform: scale(1.02);
+    transition: transform 0.2s ease;
+}
 
 
 /* Size classes */
@@ -68,7 +74,7 @@
 
 .assistant-mascot-large {
     width: 400px;
-    height: 400px;
+    height: 250px;
 }
 
 /* Position classes */
@@ -172,5 +178,221 @@
     
     .assistant-mascot:hover {
         transform: none;
+    }
+}
+
+/* Thought Bubble Cloud Styles */
+.thought-bubble {
+    position: fixed;
+    background: white;
+    border-radius: 20px;
+    padding: 25px 20px 20px 20px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15), 
+                0 8px 25px rgba(0, 0, 0, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    max-width: 280px;
+    min-height: 100px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    text-align: center;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    color: #333;
+    cursor: pointer;
+    z-index: 10000;
+    animation: cloudFloat 0.5s ease-out;
+    transition: all 0.3s ease;
+    overflow: visible;
+}
+
+.thought-bubble:hover {
+    transform: scale(1.02);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2),
+                0 10px 30px rgba(0, 0, 0, 0.15),
+                inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.thought-bubble.showing-answer {
+    background: white;
+    /* border-left: 4px solid #007cba; */
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15),
+                0 8px 25px rgba(0, 0, 0, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.thought-bubble-content {
+    word-wrap: break-word;
+    hyphens: auto;
+}
+
+.thought-bubble-tail {
+    position: absolute;
+    bottom: -15px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 15px solid transparent;
+    border-right: 15px solid transparent;
+    border-top: 15px solid white;
+}
+
+.thought-bubble.showing-answer .thought-bubble-tail {
+    border-top-color: #f8f9fa;
+}
+
+/* Cloud Shape Variations */
+.cloud-shape-1 {
+    background: white;
+    border-radius: 50px 30px 50px 30px;
+    position: relative;
+}
+
+.cloud-shape-1::before {
+    content: '';
+    position: absolute;
+    top: -10px;
+    left: 20px;
+    width: 40px;
+    height: 40px;
+    background: white;
+    border-radius: 50%;
+    opacity: 1;
+}
+
+.cloud-shape-1::after {
+    content: '';
+    position: absolute;
+    top: 5px;
+    right: 15px;
+    width: 35px;
+    height: 35px;
+    background: white;
+    border-radius: 50%;
+    opacity: 1;
+}
+
+.cloud-shape-2 {
+    background: white;
+    border-radius: 40px 60px 40px 60px;
+    position: relative;
+}
+
+.cloud-shape-2::before {
+    content: '';
+    position: absolute;
+    top: -15px;
+    left: 30px;
+    width: 45px;
+    height: 45px;
+    background: white;
+    border-radius: 50%;
+    opacity: 1;
+}
+
+.cloud-shape-2::after {
+    content: '';
+    position: absolute;
+    top: -8px;
+    right: 25px;
+    width: 38px;
+    height: 38px;
+    background: white;
+    border-radius: 50%;
+    opacity: 1;
+}
+
+.cloud-shape-3 {
+    background: white;
+    border-radius: 60px 25px 60px 25px;
+    position: relative;
+}
+
+.cloud-shape-3::before {
+    content: '';
+    position: absolute;
+    top: -12px;
+    left: 25px;
+    width: 42px;
+    height: 42px;
+    background: white;
+    border-radius: 50%;
+    opacity: 1;
+}
+
+.cloud-shape-3::after {
+    content: '';
+    position: absolute;
+    top: -5px;
+    right: 20px;
+    width: 36px;
+    height: 36px;
+    background: white;
+    border-radius: 50%;
+    opacity: 1;
+}
+
+.cloud-shape-4 {
+    background: white;
+    border-radius: 35px 45px 35px 45px;
+    position: relative;
+}
+
+.cloud-shape-4::before {
+    content: '';
+    position: absolute;
+    top: -18px;
+    left: 35px;
+    width: 48px;
+    height: 48px;
+    background: white;
+    border-radius: 50%;
+    opacity: 1;
+}
+
+.cloud-shape-4::after {
+    content: '';
+    position: absolute;
+    top: -10px;
+    right: 30px;
+    width: 40px;
+    height: 40px;
+    background: white;
+    border-radius: 50%;
+    opacity: 1;
+}
+
+/* Cloud Float Animation */
+@keyframes cloudFloat {
+    0% {
+        opacity: 0;
+        transform: translateY(20px) scale(0.8);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* Responsive adjustments for thought bubbles */
+@media (max-width: 768px) {
+    .thought-bubble {
+        max-width: 240px;
+        font-size: 13px;
+        padding: 22px 16px 18px 16px;
+        min-height: 90px;
+        align-items: flex-start;
+    }
+}
+
+@media (max-width: 480px) {
+    .thought-bubble {
+        max-width: 220px;
+        font-size: 12px;
+        padding: 20px 14px 16px 14px;
+        min-height: 85px;
+        align-items: flex-start;
     }
 }
