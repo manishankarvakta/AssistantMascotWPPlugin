@@ -1,0 +1,44 @@
+# WordPress plugin specific ignores
+*.log
+*.sql
+*.sqlite
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+
+# Build files
+node_modules/
+vendor/
+build/
+dist/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Cache files
+*.cache
+cache/
+
+# Backup files
+*.backup
+*.old
